@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SeedingType {
+  RANDOM
+  RANKED
+  MANUAL
+}
+
+enum TournamentStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+}
+
+enum MatchStatus {
+  PENDING   // taraflardan biri veya ikisi henüz belli değil
+  SCHEDULED // iki oyuncu da belli, saat atanmamış olabilir
+  COMPLETED
+}
+
+model Club {
+  id          String   @id @default(cuid())
+  name        String
+  createdAt   DateTime @default(now())
+
+  players     Player[]
+  tournaments Tournament[]
+}
+
+model Player {
+  id        String   @id @default(cuid())
+  clubId    String
+  club      Club     @relation(fields: [clubId], references: [id])
+  name      String
+  phone     String?
+  rating    Int      @default(1000) // basit bir skill rating, seed sıralaması için kullanılabilir
+  createdAt DateTime @default(now())
+
+  participations Participant[]
+}
+
+model Tournament {
+  id           String           @id @default(cuid())
+  clubId       String
+  club         Club             @relation(fields: [clubId], references: [id])
+  name         String
+  format       String           @default("single_elimination")
+  seedingType  SeedingType      @default(RANDOM)
+  drawSize     Int              // 4, 8, 16, 32... (2'nin kuvveti)
+  status       TournamentStatus @default(DRAFT)
+  createdAt    DateTime         @default(now())
+
+  participants Participant[]
+  matches      Match[]
+}
+
+model Participant {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  playerId     String
+  player       Player     @relation(fields: [playerId], references: [id])
+  seed         Int?       // null ise henüz atanmamış / manuel yerleştirilecek
+
+  @@unique([tournamentId, playerId])
+}
+
+// Bracket'taki her kutu bir Match'tir. player1/player2 null olabilir (henüz
+// belli değil ya da bye durumu). winnerId belli olunca nextMatchId'deki
+// maça otomatik ilerler (bracket ilerleme mantığı burada, DB'de değil,
+// uygulama katmanında yürütülür — bkz. packages/core/src/bracket.ts).
+model Match {
+  id           String      @id @default(cuid())
+  tournamentId String
+  tournament   Tournament  @relation(fields: [tournamentId], references: [id])
+  round        Int         // 1 = ilk tur
+  position     Int         // o turdaki sıra (bracket'ta yerleşim için)
+
+  player1Id    String?
+  player2Id    String?
+
+  winnerId     String?
+  score        String?     // örn: "6-3, 4-6, 10-7" (super tiebreak)
+
+  status       MatchStatus @default(PENDING)
+
+  nextMatchId  String?     // kazananın ilerleyeceği maç
+  nextMatch    Match?      @relation("BracketProgression", fields: [nextMatchId], references: [id])
+  previousMatches Match[]  @relation("BracketProgression")
+
+  scheduledAt  DateTime?
+  createdAt    DateTime    @default(now())
+
+  @@unique([tournamentId, round, position])
+}
