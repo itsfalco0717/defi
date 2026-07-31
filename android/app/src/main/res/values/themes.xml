@@ -1,0 +1,6 @@
+<resources>
+    <!-- Gercek renk/tipografi temasi Kotlin tarafinda
+         ui/theme/Theme.kt icindeki MaterialTheme ile yonetiliyor.
+         Bu, Compose acilana kadar sistemin kullandigi minimal bir temel. -->
+    <style name="Theme.TenisTurnuva" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>

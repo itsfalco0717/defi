@@ -25,8 +25,30 @@ enum MatchStatus {
   COMPLETED
 }
 
+enum UserRole {
+  ADMIN  // kulup yoneticisi — turnuva olusturur, katilimci ekler, sonuc girer
+  PLAYER // sadece goruntuler — turnuva/bracket izler
+}
+
+// Hesap (login). Bir kulubun sahibi (ADMIN) bu tablodan gelir; PLAYER
+// hesaplari istege bagli olarak bir Player (kulup listesi) kaydiyla
+// eslestirilebilir (userId), ama eslesme zorunlu degildir.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole
+  createdAt    DateTime @default(now())
+
+  ownedClubs   Club[]   @relation("ClubOwner")
+  playerLink   Player?  @relation("PlayerAccount")
+}
+
 model Club {
   id          String   @id @default(cuid())
+  ownerId     String
+  owner       User     @relation("ClubOwner", fields: [ownerId], references: [id])
   name        String
   createdAt   DateTime @default(now())
 
@@ -38,6 +60,8 @@ model Player {
   id        String   @id @default(cuid())
   clubId    String
   club      Club     @relation(fields: [clubId], references: [id])
+  userId    String?  @unique
+  user      User?    @relation("PlayerAccount", fields: [userId], references: [id])
   name      String
   phone     String?
   rating    Int      @default(1000) // basit bir skill rating, seed sıralaması için kullanılabilir

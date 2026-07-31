@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.next/
+.env
+.turbo/
+*.log
+
+# Android
+android/.gradle/
+android/local.properties
+android/.idea/
+android/app/build/
+android/build/
+android/*.iml
+android/app/*.iml
+android/.cxx/
+android/captures/
